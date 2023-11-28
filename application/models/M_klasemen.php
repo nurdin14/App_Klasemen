@@ -1,0 +1,29 @@
+<?php
+
+class M_klasemen extends CI_Model {
+
+    function tampil()
+    {
+        return $this->db->query("SELECT
+            skor_merged.klub,
+            COUNT(*) AS total_main,
+            SUM(CASE WHEN skor_merged.status = 3 THEN 1 ELSE 0 END) AS total_menang,
+            SUM(CASE WHEN skor_merged.status = 0 THEN 1 ELSE 0 END) AS total_kalah,
+            SUM(CASE WHEN skor_merged.status = 1 THEN 1 ELSE 0 END) AS total_seri,
+            SUM(skor_merged.score) AS total_goal_menang,
+            SUM(CASE WHEN skor_merged.status = 0 THEN IFNULL(kalah_skor.kalah_score, 0) ELSE 0 END) AS total_goal_kalah,
+            SUM(CASE WHEN skor_merged.status = 3 THEN 3 WHEN skor_merged.status = 1 THEN 1 ELSE 0 END) AS total_point
+        FROM (
+            SELECT klub_1 AS klub, score_1 AS score, status_1 AS status FROM tb_skor
+            UNION ALL
+            SELECT klub_2 AS klub, score_2 AS score, status_2 AS status FROM tb_skor
+        ) AS skor_merged
+        LEFT JOIN (
+            SELECT klub_1 AS klub, SUM(score_2) AS kalah_score FROM tb_skor WHERE status_1 = 0 GROUP BY klub_1
+            UNION ALL
+            SELECT klub_2 AS klub, SUM(score_1) AS kalah_score FROM tb_skor WHERE status_2 = 0 GROUP BY klub_2
+        ) AS kalah_skor ON skor_merged.klub = kalah_skor.klub
+        GROUP BY skor_merged.klub
+        LIMIT 0, 25");
+    }
+}
